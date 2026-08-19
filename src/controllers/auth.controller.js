@@ -1,5 +1,49 @@
 import User from '../models/User.js';
 import { generateToken, sendTokenResponse } from '../utils/token.js';
+import { OAuth2Client } from 'google-auth-library';
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// @desc    Google Login/Signup
+// @route   POST /api/v1/auth/google
+export const googleAuth = async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    // Verify the Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    // Find or create user
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Create new user (signup via Google)
+      user = await User.create({
+        name,
+        email,
+        password: `google_${googleId}_${Date.now()}`, // Random password (won't be used)
+        avatar: picture,
+        isActive: true,
+      });
+    } else {
+      // Update avatar if not set
+      if (!user.avatar && picture) {
+        user.avatar = picture;
+        await user.save();
+      }
+    }
+
+    sendTokenResponse(user, 200, res);
+  } catch (error) {
+    res.status(401).json({ error: 'Google authentication failed' });
+  }
+};
 
 // @desc    Register new user
 // @route   POST /api/v1/auth/register
