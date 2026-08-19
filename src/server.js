@@ -33,7 +33,12 @@ app.set('trust proxy', 1);
 // Security Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: [
+    'https://munazshop.com',
+    'https://www.munazshop.com',
+    'https://munaz.vercel.app',
+    'http://localhost:5173',
+  ],
   credentials: true,
 }));
 
