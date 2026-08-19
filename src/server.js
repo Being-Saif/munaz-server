@@ -18,6 +18,7 @@ import reviewRoutes from './routes/review.routes.js';
 import wishlistRoutes from './routes/wishlist.routes.js';
 import bannerRoutes from './routes/banner.routes.js';
 import occasionRoutes from './routes/occasion.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
 
 // Load env variables
 dotenv.config();
@@ -77,6 +78,7 @@ app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/wishlist', wishlistRoutes);
 app.use('/api/v1/banners', bannerRoutes);
 app.use('/api/v1/occasions', occasionRoutes);
+app.use('/api/v1/upload', uploadRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
