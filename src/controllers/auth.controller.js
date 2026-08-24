@@ -29,6 +29,7 @@ export const googleAuth = async (req, res) => {
         email,
         password: `google_${googleId}_${Date.now()}`, // Random password (won't be used)
         avatar: picture,
+        authProvider: 'google',
         isActive: true,
       });
     } else {
@@ -78,6 +79,11 @@ export const login = async (req, res) => {
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Check if account was created via Google
+    if (user.authProvider === 'google') {
+      return res.status(401).json({ error: 'This account uses Google Sign-In. Please login with Google.' });
     }
 
     // Check password

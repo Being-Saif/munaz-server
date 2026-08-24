@@ -47,6 +47,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  authProvider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local',
+  },
   passwordResetToken: String,
   passwordResetExpires: Date,
 }, {
