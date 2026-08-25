@@ -1,15 +1,23 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+let razorpay = null;
+
+// Only initialize if keys are present
+if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+  razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+}
 
 // @desc    Create Razorpay order
 // @route   POST /api/v1/payment/create-order
 export const createPaymentOrder = async (req, res) => {
   try {
+    if (!razorpay) {
+      return res.status(503).json({ error: 'Payment gateway not configured yet' });
+    }
     const { amount, currency = 'INR', receipt } = req.body;
 
     if (!amount) {
