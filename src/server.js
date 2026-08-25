@@ -87,6 +87,16 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Munaz API is running' });
 });
 
+// Temporary: make user admin (remove after use)
+app.get('/api/make-admin/:email', async (req, res) => {
+  try {
+    const { default: User } = await import('./models/User.js');
+    const user = await User.findOneAndUpdate({ email: req.params.email }, { role: 'admin' }, { new: true });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ success: true, message: `${user.name} is now admin`, role: user.role });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
