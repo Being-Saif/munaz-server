@@ -91,3 +91,19 @@ export const getAllUsers = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// @desc    Update user role (admin)
+// @route   PUT /api/v1/users/:userId/role
+export const updateUserRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+    const user = await User.findByIdAndUpdate(req.params.userId, { role }, { new: true });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
