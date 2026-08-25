@@ -19,6 +19,7 @@ import wishlistRoutes from './routes/wishlist.routes.js';
 import bannerRoutes from './routes/banner.routes.js';
 import occasionRoutes from './routes/occasion.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 
 // Load env variables
 dotenv.config();
@@ -79,6 +80,7 @@ app.use('/api/v1/wishlist', wishlistRoutes);
 app.use('/api/v1/banners', bannerRoutes);
 app.use('/api/v1/occasions', occasionRoutes);
 app.use('/api/v1/upload', uploadRoutes);
+app.use('/api/v1/payment', paymentRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

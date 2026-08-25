@@ -81,20 +81,57 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Check if account was created via Google
+    // If Google user — check if they've set a password yet
     if (user.authProvider === 'google') {
-      return res.status(401).json({ error: 'This account uses Google Sign-In. Please login with Google.' });
-    }
-
-    // Check password
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      // Try matching the password (maybe they set one via setPassword endpoint)
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        return res.status(401).json({ 
+          error: 'This account was created with Google. Please login with Google or set a password first.',
+          code: 'GOOGLE_ACCOUNT',
+          email: user.email
+        });
+      }
+    } else {
+      // Normal password check
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
     }
 
     if (!user.isActive) {
       return res.status(401).json({ error: 'Account deactivated. Contact support.' });
     }
+
+    sendTokenResponse(user, 200, res);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// @desc    Set password for Google users (or reset password)
+// @route   POST /api/v1/auth/set-password
+export const setPassword = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.password = password;
+    // Keep authProvider as google but now they can use both methods
+    await user.save();
 
     sendTokenResponse(user, 200, res);
   } catch (error) {
