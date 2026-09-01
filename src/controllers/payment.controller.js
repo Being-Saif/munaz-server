@@ -24,8 +24,15 @@ export const createPaymentOrder = async (req, res) => {
       return res.status(400).json({ error: 'Amount is required' });
     }
 
+    const amountInPaise = Math.round(amount * 100);
+
+    // Razorpay minimum is 100 paise (₹1)
+    if (amountInPaise < 100) {
+      return res.status(400).json({ error: 'Amount must be at least ₹1' });
+    }
+
     const options = {
-      amount: Math.round(amount * 100), // Razorpay expects amount in paise
+      amount: amountInPaise,
       currency,
       receipt: receipt || `order_${Date.now()}`,
     };
