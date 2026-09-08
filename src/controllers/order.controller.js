@@ -11,9 +11,23 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ error: 'No items in order' });
     }
 
+    // Sanitize items — only keep product ref if it's a valid ObjectId
+    const sanitizedItems = items.map((it) => {
+      const isValidId = it.product && /^[0-9a-fA-F]{24}$/.test(String(it.product));
+      return {
+        product: isValidId ? it.product : undefined,
+        name: it.name,
+        thumbnail: it.thumbnail,
+        color: it.color,
+        size: it.size,
+        price: it.price,
+        quantity: it.quantity,
+      };
+    });
+
     const order = await Order.create({
       user: req.user._id,
-      items,
+      items: sanitizedItems,
       shippingAddress,
       paymentMethod,
       shippingMethod,
