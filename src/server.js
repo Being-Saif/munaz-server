@@ -20,6 +20,7 @@ import bannerRoutes from './routes/banner.routes.js';
 import occasionRoutes from './routes/occasion.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import statsRoutes from './routes/stats.routes.js';
 
 // Load env variables
 dotenv.config();
@@ -81,10 +82,39 @@ app.use('/api/v1/banners', bannerRoutes);
 app.use('/api/v1/occasions', occasionRoutes);
 app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/payment', paymentRoutes);
+app.use('/api/v1/stats', statsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Munaz API is running' });
+});
+
+// Temporary: clean all dummy data (products, orders, reviews) - remove after use
+app.get('/api/clean-dummy/:secret', async (req, res) => {
+  try {
+    if (req.params.secret !== 'munaz-clean-2026') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const { default: Product } = await import('./models/Product.js');
+    const { default: Order } = await import('./models/Order.js');
+    const { default: Review } = await import('./models/Review.js');
+    const { default: Cart } = await import('./models/Cart.js');
+
+    const [p, o, r] = await Promise.all([
+      Product.deleteMany({}),
+      Order.deleteMany({}),
+      Review.deleteMany({}),
+    ]);
+    await Cart.updateMany({}, { items: [] });
+
+    res.json({
+      success: true,
+      message: 'Dummy data cleaned',
+      deleted: { products: p.deletedCount, orders: o.deletedCount, reviews: r.deletedCount },
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // 404 handler
