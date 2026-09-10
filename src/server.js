@@ -21,6 +21,7 @@ import occasionRoutes from './routes/occasion.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import statsRoutes from './routes/stats.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
 
 // Load env variables
 dotenv.config();
@@ -83,6 +84,7 @@ app.use('/api/v1/occasions', occasionRoutes);
 app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/payment', paymentRoutes);
 app.use('/api/v1/stats', statsRoutes);
+app.use('/api/v1/settings', settingsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
