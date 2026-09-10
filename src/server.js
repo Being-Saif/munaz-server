@@ -89,48 +89,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Munaz API is running' });
 });
 
-// Temporary: clean all dummy data - remove after use
-// GET /api/clean-dummy/:secret            -> wipes products, orders, reviews (default)
-// GET /api/clean-dummy/:secret?all=true   -> also wipes categories, banners, occasions
-app.get('/api/clean-dummy/:secret', async (req, res) => {
-  try {
-    if (req.params.secret !== 'munaz-clean-2026') {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-    const { default: Product } = await import('./models/Product.js');
-    const { default: Order } = await import('./models/Order.js');
-    const { default: Review } = await import('./models/Review.js');
-    const { default: Cart } = await import('./models/Cart.js');
-
-    const [p, o, r] = await Promise.all([
-      Product.deleteMany({}),
-      Order.deleteMany({}),
-      Review.deleteMany({}),
-    ]);
-    await Cart.updateMany({}, { items: [] });
-
-    const deleted = { products: p.deletedCount, orders: o.deletedCount, reviews: r.deletedCount };
-
-    if (req.query.all === 'true') {
-      const { default: Category } = await import('./models/Category.js');
-      const { default: Banner } = await import('./models/Banner.js');
-      const { default: Occasion } = await import('./models/Occasion.js');
-      const [c, b, occ] = await Promise.all([
-        Category.deleteMany({}),
-        Banner.deleteMany({}),
-        Occasion.deleteMany({}),
-      ]);
-      deleted.categories = c.deletedCount;
-      deleted.banners = b.deletedCount;
-      deleted.occasions = occ.deletedCount;
-    }
-
-    res.json({ success: true, message: 'Dummy data cleaned', deleted });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
