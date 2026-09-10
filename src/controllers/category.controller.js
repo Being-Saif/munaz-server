@@ -1,17 +1,33 @@
 import Category from '../models/Category.js';
+import Product from '../models/Product.js';
 
-// @desc    Get all categories
+// @desc    Get all categories (with live, accurate product counts)
 // @route   GET /api/v1/categories
 export const getCategories = async (req, res) => {
   try {
     const categories = await Category.find({ isActive: true }).sort({ order: 1 });
-    res.json({ success: true, data: categories });
+
+    // Compute real product counts instead of relying on the stale
+    // productCount field, which is never kept in sync when products
+    // are added/removed/reassigned.
+    const counts = await Product.aggregate([
+      { $match: { status: 'active', isActive: true } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+    ]);
+    const countMap = new Map(counts.map((c) => [String(c._id), c.count]));
+
+    const withLiveCounts = categories.map((cat) => ({
+      ...cat.toObject(),
+      productCount: countMap.get(String(cat._id)) || 0,
+    }));
+
+    res.json({ success: true, data: withLiveCounts });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-// @desc    Get single category
+// @desc    Get single category (with live product count)
 // @route   GET /api/v1/categories/:slug
 export const getCategoryBySlug = async (req, res) => {
   try {
@@ -19,7 +35,10 @@ export const getCategoryBySlug = async (req, res) => {
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
-    res.json({ success: true, data: category });
+
+    const productCount = await Product.countDocuments({ category: category._id, status: 'active', isActive: true });
+
+    res.json({ success: true, data: { ...category.toObject(), productCount } });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
