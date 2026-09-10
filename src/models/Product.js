@@ -38,6 +38,11 @@ const productSchema = new mongoose.Schema({
     type: Number,
     default: 5,
   },
+  // Refund amount for wrong/defective item returns (optional, admin-set)
+  returnsPrice: {
+    type: Number,
+    default: null,
+  },
   isOnSale: {
     type: Boolean,
     default: false,
@@ -89,6 +94,8 @@ const productSchema = new mongoose.Schema({
     careInstructions: { type: String, default: '' },
     countryOfOrigin: { type: String, default: 'India' },
     manufacturer: { type: String, default: '' },
+    netQuantity: { type: Number, default: 1 },
+    unit: { type: String, default: 'Piece' },
   },
 
   // Variants (Step 4 — color x size combinations)
