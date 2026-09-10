@@ -98,6 +98,13 @@ const productSchema = new mongoose.Schema({
     sku: { type: String },
     stock: { type: Number, default: 0 },
     price: { type: Number },
+    // Optional per-variant photos (e.g. show the actual Blue product images
+    // when a customer selects the Blue variant). Falls back to the product's
+    // shared images[] when empty.
+    images: [{
+      url: { type: String, required: true },
+      isPrimary: { type: Boolean, default: false },
+    }],
   }],
 
   // Size Chart (clothing categories only)
