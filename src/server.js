@@ -89,7 +89,9 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Munaz API is running' });
 });
 
-// Temporary: clean all dummy data (products, orders, reviews) - remove after use
+// Temporary: clean all dummy data - remove after use
+// GET /api/clean-dummy/:secret            -> wipes products, orders, reviews (default)
+// GET /api/clean-dummy/:secret?all=true   -> also wipes categories, banners, occasions
 app.get('/api/clean-dummy/:secret', async (req, res) => {
   try {
     if (req.params.secret !== 'munaz-clean-2026') {
@@ -107,11 +109,23 @@ app.get('/api/clean-dummy/:secret', async (req, res) => {
     ]);
     await Cart.updateMany({}, { items: [] });
 
-    res.json({
-      success: true,
-      message: 'Dummy data cleaned',
-      deleted: { products: p.deletedCount, orders: o.deletedCount, reviews: r.deletedCount },
-    });
+    const deleted = { products: p.deletedCount, orders: o.deletedCount, reviews: r.deletedCount };
+
+    if (req.query.all === 'true') {
+      const { default: Category } = await import('./models/Category.js');
+      const { default: Banner } = await import('./models/Banner.js');
+      const { default: Occasion } = await import('./models/Occasion.js');
+      const [c, b, occ] = await Promise.all([
+        Category.deleteMany({}),
+        Banner.deleteMany({}),
+        Occasion.deleteMany({}),
+      ]);
+      deleted.categories = c.deletedCount;
+      deleted.banners = b.deletedCount;
+      deleted.occasions = occ.deletedCount;
+    }
+
+    res.json({ success: true, message: 'Dummy data cleaned', deleted });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

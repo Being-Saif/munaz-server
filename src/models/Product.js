@@ -3,14 +3,13 @@ import mongoose from 'mongoose';
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Product name is required'],
     trim: true,
     maxlength: 200,
   },
   slug: {
     type: String,
-    required: true,
     unique: true,
+    sparse: true,
     lowercase: true,
   },
   shortDescription: {
@@ -19,11 +18,9 @@ const productSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: [true, 'Product description is required'],
   },
   price: {
     type: Number,
-    required: [true, 'Price is required'],
     min: 0,
   },
   salePrice: {
@@ -37,6 +34,10 @@ const productSchema = new mongoose.Schema({
     max: 100,
     default: 0,
   },
+  gst: {
+    type: Number,
+    default: 5,
+  },
   isOnSale: {
     type: Boolean,
     default: false,
@@ -44,7 +45,6 @@ const productSchema = new mongoose.Schema({
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
-    required: true,
   },
   subcategory: {
     type: String,
@@ -58,10 +58,10 @@ const productSchema = new mongoose.Schema({
   images: [{
     url: { type: String, required: true },
     alt: { type: String, default: '' },
+    isPrimary: { type: Boolean, default: false },
   }],
   thumbnail: {
     type: String,
-    required: [true, 'Thumbnail is required'],
   },
   colors: [{
     name: { type: String },
@@ -71,6 +71,43 @@ const productSchema = new mongoose.Schema({
     name: { type: String },
     stock: { type: Number, default: 0 },
   }],
+
+  // Basic Details (Step 2 — dynamic attributes)
+  attributes: {
+    fabric: { type: String, default: '' },
+    fit: { type: String, default: '' },
+    length: { type: String, default: '' },
+    neck: { type: String, default: '' },
+    occasion: [{ type: String }],
+  },
+
+  // Additional Details (Step 3)
+  additionalDetails: {
+    pattern: { type: String, default: '' },
+    ornamentation: { type: String, default: '' },
+    styleCode: { type: String, default: '' },
+    careInstructions: { type: String, default: '' },
+    countryOfOrigin: { type: String, default: 'India' },
+    manufacturer: { type: String, default: '' },
+  },
+
+  // Variants (Step 4 — color x size combinations)
+  variants: [{
+    color: { type: String },
+    size: { type: String },
+    sku: { type: String },
+    stock: { type: Number, default: 0 },
+    price: { type: Number },
+  }],
+
+  // Size Chart (clothing categories only)
+  sizeChart: [{
+    size: { type: String },
+    chest: { type: String },
+    waist: { type: String },
+    length: { type: String },
+  }],
+
   totalStock: {
     type: Number,
     default: 0,
@@ -94,6 +131,19 @@ const productSchema = new mongoose.Schema({
   isTrending: { type: Boolean, default: false },
   isBestSeller: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
+
+  // Draft/publish workflow
+  status: {
+    type: String,
+    enum: ['draft', 'active', 'inactive'],
+    default: 'active',
+  },
+  // Which wizard step the draft was last saved at (1-5)
+  draftStep: {
+    type: Number,
+    default: 1,
+  },
+
   flashSale: {
     isActive: { type: Boolean, default: false },
     endTime: { type: Date },
@@ -109,6 +159,7 @@ productSchema.index({ price: 1 });
 productSchema.index({ isTrending: 1 });
 productSchema.index({ isNewArrival: 1 });
 productSchema.index({ isBestSeller: 1 });
+productSchema.index({ status: 1 });
 productSchema.index({ name: 'text', tags: 'text' });
 
 const Product = mongoose.model('Product', productSchema);
