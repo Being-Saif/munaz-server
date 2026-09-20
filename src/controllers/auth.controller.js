@@ -1,6 +1,8 @@
 import User from '../models/User.js';
 import { generateToken, sendTokenResponse } from '../utils/token.js';
 import { OAuth2Client } from 'google-auth-library';
+import crypto from 'crypto';
+import { sendPasswordResetEmail } from '../utils/email.js';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -131,6 +133,81 @@ export const setPassword = async (req, res) => {
 
     user.password = password;
     // Keep authProvider as google but now they can use both methods
+    await user.save();
+
+    sendTokenResponse(user, 200, res);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// @desc    Forgot password — email a reset link
+// @route   POST /api/v1/auth/forgot-password
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+    // Always respond success to avoid leaking which emails are registered.
+    if (!user) {
+      return res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
+    }
+
+    // Create a raw token (goes in the email link) and store only its hash.
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    user.passwordResetToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    user.passwordResetExpires = Date.now() + 30 * 60 * 1000; // 30 minutes
+    await user.save({ validateBeforeSave: false });
+
+    const clientUrl = process.env.CLIENT_URL || 'https://www.munazshop.com';
+    const resetUrl = `${clientUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
+
+    try {
+      await sendPasswordResetEmail(user.email, resetUrl, user.name);
+    } catch (mailErr) {
+      // Roll back the token if the email failed to send.
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+      return res.status(500).json({ error: 'Could not send reset email. Please try again later.' });
+    }
+
+    res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// @desc    Reset password using the emailed token
+// @route   POST /api/v1/auth/reset-password
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, email, password } = req.body;
+    if (!token || !email || !password) {
+      return res.status(400).json({ error: 'Token, email and new password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const hashed = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+      passwordResetToken: hashed,
+      passwordResetExpires: { $gt: Date.now() },
+    }).select('+password');
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
+    }
+
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
     await user.save();
 
     sendTokenResponse(user, 200, res);
