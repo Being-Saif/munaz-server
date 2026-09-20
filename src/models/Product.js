@@ -83,7 +83,15 @@ const productSchema = new mongoose.Schema({
     fit: { type: String, default: '' },
     length: { type: String, default: '' },
     neck: { type: String, default: '' },
+    sleeve: { type: String, default: '' },
     occasion: [{ type: String }],
+    // Bottom details (for kurta sets / co-ords)
+    bottomType: { type: String, default: '' },
+    bottomColor: { type: String, default: '' },
+    bottomFabric: { type: String, default: '' },
+    // Dupatta details (for sets that include a dupatta)
+    dupattaColor: { type: String, default: '' },
+    dupattaFabric: { type: String, default: '' },
   },
 
   // Additional Details (Step 3)
