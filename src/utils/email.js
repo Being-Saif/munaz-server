@@ -13,6 +13,11 @@ const getTransporter = () => {
     port: Number(process.env.SMTP_PORT) || 587,
     secure: false, // 587 uses STARTTLS
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    // Fail fast instead of hanging the request forever if the SMTP port is
+    // slow/blocked on the host.
+    connectionTimeout: 10000, // 10s to establish the connection
+    greetingTimeout: 10000,   // 10s to receive the SMTP greeting
+    socketTimeout: 15000,     // 15s socket inactivity
   });
   return transporter;
 };

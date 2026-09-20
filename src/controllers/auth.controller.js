@@ -166,17 +166,13 @@ export const forgotPassword = async (req, res) => {
     const clientUrl = process.env.CLIENT_URL || 'https://www.munazshop.com';
     const resetUrl = `${clientUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
 
-    try {
-      await sendPasswordResetEmail(user.email, resetUrl, user.name);
-    } catch (mailErr) {
-      // Roll back the token if the email failed to send.
-      user.passwordResetToken = undefined;
-      user.passwordResetExpires = undefined;
-      await user.save({ validateBeforeSave: false });
-      return res.status(500).json({ error: 'Could not send reset email. Please try again later.' });
-    }
-
+    // Respond immediately so the client never hangs on a slow SMTP connection.
     res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
+
+    // Send the email in the background (don't block the response).
+    sendPasswordResetEmail(user.email, resetUrl, user.name).catch((mailErr) => {
+      console.error('[forgotPassword] email send failed:', mailErr.message);
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
