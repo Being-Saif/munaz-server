@@ -111,4 +111,75 @@ export const sendPasswordResetEmail = async (to, resetUrl, name = '') => {
   return sendEmail({ to, subject: 'Reset your Munaz password', html });
 };
 
-export default { sendEmail, sendPasswordResetEmail, isEmailConfigured };
+/**
+ * Branded order-confirmation email sent to the customer after they place an order.
+ */
+export const sendOrderConfirmationEmail = async (to, order) => {
+  const rupee = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+  const a = order.shippingAddress || {};
+  const items = order.items || [];
+
+  const itemRows = items.map((it) => `
+    <tr>
+      <td style="padding:8px 0;font-size:13px;color:#374151;">
+        ${it.name}${(it.size || it.color) ? `<br/><span style="font-size:11px;color:#9ca3af;">${[it.size, it.color].filter(Boolean).join(' · ')}</span>` : ''}
+      </td>
+      <td style="padding:8px 0;font-size:13px;color:#6b7280;text-align:center;">×${it.quantity}</td>
+      <td style="padding:8px 0;font-size:13px;color:#111827;text-align:right;font-weight:600;">${rupee(it.price * it.quantity)}</td>
+    </tr>`).join('');
+
+  const paymentLabel = order.paymentMethod === 'cod' ? 'Cash on Delivery'
+    : order.paymentMethod ? order.paymentMethod.toUpperCase() : '';
+
+  const html = `
+  <div style="font-family: Arial, Helvetica, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; color: #1f2937;">
+    <div style="text-align:center; margin-bottom: 20px;">
+      <span style="font-size: 26px; font-weight: 700; font-style: italic; color: #7E57C2;">Muna<span style="color:#EC4899;">z</span></span>
+    </div>
+    <div style="background:#F3E8FF; border-radius:12px; padding:20px; text-align:center; margin-bottom:20px;">
+      <h2 style="font-size:18px; margin:0 0 6px; color:#111827;">Thank you for your order! 🎉</h2>
+      <p style="font-size:13px; color:#6b7280; margin:0;">Order <strong>#${order.orderNumber}</strong> is confirmed.</p>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+      <thead>
+        <tr style="border-bottom:1px solid #e5e7eb;">
+          <th style="text-align:left; font-size:11px; text-transform:uppercase; color:#9ca3af; padding-bottom:6px;">Item</th>
+          <th style="text-align:center; font-size:11px; text-transform:uppercase; color:#9ca3af; padding-bottom:6px;">Qty</th>
+          <th style="text-align:right; font-size:11px; text-transform:uppercase; color:#9ca3af; padding-bottom:6px;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+
+    <table style="width:100%; border-top:2px solid #111827; padding-top:8px;">
+      <tr><td style="font-size:13px; color:#6b7280; padding-top:8px;">Items Total</td><td style="font-size:13px; text-align:right; padding-top:8px;">${rupee(order.itemsTotal)}</td></tr>
+      <tr><td style="font-size:13px; color:#6b7280;">Shipping</td><td style="font-size:13px; text-align:right;">${order.shippingCost ? rupee(order.shippingCost) : 'Free'}</td></tr>
+      <tr><td style="font-size:15px; font-weight:700; color:#111827; padding-top:6px;">Total</td><td style="font-size:15px; font-weight:700; text-align:right; color:#111827; padding-top:6px;">${rupee(order.totalAmount)}</td></tr>
+    </table>
+
+    <div style="background:#f9fafb; border-radius:10px; padding:16px; margin-top:20px;">
+      <p style="font-size:11px; text-transform:uppercase; color:#9ca3af; margin:0 0 6px; font-weight:600;">Delivering To</p>
+      <p style="font-size:13px; color:#374151; margin:0; line-height:1.6;">
+        <strong>${a.fullName || ''}</strong><br/>
+        ${a.address || ''}<br/>
+        ${a.city || ''}${a.city ? ', ' : ''}${a.state || ''} - ${a.pincode || ''}<br/>
+        ${a.phone ? `Phone: ${a.phone}` : ''}
+      </p>
+      <p style="font-size:12px; color:#6b7280; margin:10px 0 0;">Payment: ${paymentLabel}</p>
+    </div>
+
+    <p style="font-size:12px; color:#9ca3af; text-align:center; margin-top:24px; line-height:1.6;">
+      We'll notify you when your order ships.<br/>
+      Thank you for shopping with Munaz 💜
+    </p>
+  </div>`;
+
+  return sendEmail({
+    to,
+    subject: `Order Confirmed #${order.orderNumber} — Munaz`,
+    html,
+  });
+};
+
+export default { sendEmail, sendPasswordResetEmail, sendOrderConfirmationEmail, isEmailConfigured };
