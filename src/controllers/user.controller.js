@@ -97,20 +97,16 @@ export const getAllUsers = async (req, res) => {
 export const updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;
-    // Only admin/user can be assigned here. Creating a superadmin is intentionally
-    // not allowed via this endpoint (must be done deliberately).
-    if (!['user', 'admin'].includes(role)) {
+    // A super admin may assign user / admin / superadmin. (Route is superAdminOnly.)
+    if (!['user', 'admin', 'superadmin'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
     const target = await User.findById(req.params.userId);
     if (!target) return res.status(404).json({ error: 'User not found' });
 
-    // A superadmin's role cannot be changed through this endpoint.
-    if (target.role === 'superadmin') {
-      return res.status(403).json({ error: 'Cannot change a super admin\'s role' });
-    }
-
+    // Only a superadmin can change another superadmin (already enforced by the
+    // superAdminOnly route guard); allow it so ownership can be shared.
     target.role = role;
     await target.save();
     res.json({ success: true, data: target });
