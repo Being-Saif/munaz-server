@@ -1,4 +1,6 @@
 import Product from '../models/Product.js';
+import Category from '../models/Category.js';
+import { customAlphabet } from 'nanoid';
 
 // @desc    Get all products (with filtering, sorting, pagination) — public, active only
 // @route   GET /api/v1/products
@@ -114,6 +116,34 @@ export const getProductById = async (req, res) => {
 const slugify = (str = '') =>
   str.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+// Generate a unique, readable style code like "MNZ-KUR-A7X9K2".
+// Uses nanoid (random, collision-resistant) for the suffix — no DB counting.
+// A short DB check is kept purely as a defensive guarantee.
+const styleIdAlphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // no confusing 0/O/1/I
+const randomStyleId = customAlphabet(styleIdAlphabet, 6);
+
+const generateStyleCode = async (categoryId) => {
+  let abbr = 'GEN';
+  try {
+    if (categoryId) {
+      const cat = await Category.findById(categoryId).select('name');
+      if (cat?.name) {
+        abbr = cat.name.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'GEN';
+      }
+    }
+  } catch { /* fall back to GEN */ }
+
+  // Generate a random code; on the astronomically-unlikely collision, retry.
+  let code;
+  let attempts = 0;
+  do {
+    code = `MNZ-${abbr}-${randomStyleId()}`;
+    attempts += 1;
+  } while ((await Product.findOne({ 'additionalDetails.styleCode': code })) && attempts < 5);
+
+  return code;
+};
+
 // @desc    Create product (admin) — supports draft (partial data) and active (full data)
 // @route   POST /api/v1/products
 export const createProduct = async (req, res) => {
@@ -134,6 +164,12 @@ export const createProduct = async (req, res) => {
     // Fallback thumbnail from first image
     if (!body.thumbnail && body.images?.length > 0) {
       body.thumbnail = body.images[0].url;
+    }
+
+    // Auto-generate a unique style code for active products (skip early drafts).
+    if (body.status === 'active' && !body.additionalDetails?.styleCode) {
+      const code = await generateStyleCode(body.category);
+      body.additionalDetails = { ...(body.additionalDetails || {}), styleCode: code };
     }
 
     const product = await Product.create(body);
@@ -164,6 +200,19 @@ export const updateProduct = async (req, res) => {
 
     if (!body.thumbnail && body.images?.length > 0) {
       body.thumbnail = body.images[0].url;
+    }
+
+    // Ensure an active product has a unique style code (e.g. a draft going live,
+    // or an older active product that predates this feature).
+    const willBeActive = body.status === 'active';
+    const incomingCode = body.additionalDetails?.styleCode;
+    if (willBeActive && !incomingCode) {
+      const existing = await Product.findById(req.params.id).select('additionalDetails.category category');
+      const hasCode = existing?.additionalDetails?.styleCode;
+      if (!hasCode) {
+        const code = await generateStyleCode(body.category || existing?.category);
+        body.additionalDetails = { ...(body.additionalDetails || {}), styleCode: code };
+      }
     }
 
     const product = await Product.findByIdAndUpdate(req.params.id, body, { new: true, runValidators: true });
