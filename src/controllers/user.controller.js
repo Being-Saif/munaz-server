@@ -92,17 +92,50 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// @desc    Update user role (admin)
+// @desc    Update user role (super admin)
 // @route   PUT /api/v1/users/:userId/role
 export const updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;
+    // Only admin/user can be assigned here. Creating a superadmin is intentionally
+    // not allowed via this endpoint (must be done deliberately).
     if (!['user', 'admin'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
-    const user = await User.findByIdAndUpdate(req.params.userId, { role }, { new: true });
+
+    const target = await User.findById(req.params.userId);
+    if (!target) return res.status(404).json({ error: 'User not found' });
+
+    // A superadmin's role cannot be changed through this endpoint.
+    if (target.role === 'superadmin') {
+      return res.status(403).json({ error: 'Cannot change a super admin\'s role' });
+    }
+
+    target.role = role;
+    await target.save();
+    res.json({ success: true, data: target });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// @desc    Bootstrap the FIRST super admin — self-disabling.
+//          Works only while no super admin exists, and only for an authenticated
+//          admin promoting their own account. Refuses once a superadmin exists.
+// @route   POST /api/v1/users/bootstrap-superadmin
+export const bootstrapSuperAdmin = async (req, res) => {
+  try {
+    const existingSuper = await User.findOne({ role: 'superadmin' });
+    if (existingSuper) {
+      return res.status(403).json({ error: 'A super admin already exists. This action is disabled.' });
+    }
+    // Promote the current (already-admin) user to superadmin.
+    const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ success: true, data: user });
+
+    user.role = 'superadmin';
+    await user.save();
+    res.json({ success: true, data: { _id: user._id, email: user.email, role: user.role } });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -33,11 +33,20 @@ export const protect = async (req, res, next) => {
   }
 };
 
-// Admin only middleware
+// Admin only middleware — allows both admin and superadmin
 export const adminOnly = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && (req.user.role === 'admin' || req.user.role === 'superadmin')) {
     next();
   } else {
     return res.status(403).json({ error: 'Admin access required' });
+  }
+};
+
+// Super admin only — for sensitive actions like managing who is an admin
+export const superAdminOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'superadmin') {
+    next();
+  } else {
+    return res.status(403).json({ error: 'Super admin access required' });
   }
 };
