@@ -114,25 +114,3 @@ export const updateUserRole = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-// @desc    Bootstrap the FIRST super admin — self-disabling.
-//          Works only while no super admin exists, and only for an authenticated
-//          admin promoting their own account. Refuses once a superadmin exists.
-// @route   POST /api/v1/users/bootstrap-superadmin
-export const bootstrapSuperAdmin = async (req, res) => {
-  try {
-    const existingSuper = await User.findOne({ role: 'superadmin' });
-    if (existingSuper) {
-      return res.status(403).json({ error: 'A super admin already exists. This action is disabled.' });
-    }
-    // Promote the current (already-admin) user to superadmin.
-    const user = await User.findById(req.user._id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    user.role = 'superadmin';
-    await user.save();
-    res.json({ success: true, data: { _id: user._id, email: user.email, role: user.role } });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
