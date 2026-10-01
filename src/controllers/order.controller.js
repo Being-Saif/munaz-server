@@ -7,7 +7,7 @@ import { sendOrderConfirmationEmail } from '../utils/email.js';
 // @route   POST /api/v1/orders
 export const createOrder = async (req, res) => {
   try {
-    const { items, shippingAddress, paymentMethod, shippingMethod, itemsTotal, shippingCost, discount, totalAmount } = req.body;
+    const { items, shippingAddress, paymentMethod, shippingMethod, itemsTotal, shippingCost, discount, couponCode, totalAmount } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ error: 'No items in order' });
@@ -36,6 +36,7 @@ export const createOrder = async (req, res) => {
       itemsTotal,
       shippingCost,
       discount,
+      couponCode: couponCode || '',
       totalAmount,
       paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid',
     });
