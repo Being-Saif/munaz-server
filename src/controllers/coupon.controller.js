@@ -15,6 +15,19 @@ const computeDiscount = (coupon, subtotal) => {
   return Math.max(0, discount);
 };
 
+// A date-only expiry (e.g. "2026-10-01") should mean valid through the END of
+// that day, not midnight at its start. Normalize to 23:59:59.999 of the day.
+const normalizeExpiry = (body) => {
+  if (body.expiresAt) {
+    const d = new Date(body.expiresAt);
+    if (!isNaN(d.getTime())) {
+      d.setHours(23, 59, 59, 999);
+      body.expiresAt = d;
+    }
+  }
+  return body;
+};
+
 // @desc    Get active, displayable coupons (public) — optionally by location
 // @route   GET /api/v1/coupons?location=checkout
 export const getPublicCoupons = async (req, res) => {
@@ -94,7 +107,7 @@ export const getAllCoupons = async (req, res) => {
 // @route   POST /api/v1/coupons
 export const createCoupon = async (req, res) => {
   try {
-    const coupon = await Coupon.create(req.body);
+    const coupon = await Coupon.create(normalizeExpiry({ ...req.body }));
     res.status(201).json({ success: true, data: coupon });
   } catch (error) {
     if (error.code === 11000) {
@@ -108,7 +121,7 @@ export const createCoupon = async (req, res) => {
 // @route   PUT /api/v1/coupons/:id
 export const updateCoupon = async (req, res) => {
   try {
-    const coupon = await Coupon.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const coupon = await Coupon.findByIdAndUpdate(req.params.id, normalizeExpiry({ ...req.body }), { new: true, runValidators: true });
     if (!coupon) return res.status(404).json({ error: 'Coupon not found' });
     res.json({ success: true, data: coupon });
   } catch (error) {
